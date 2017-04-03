@@ -1,0 +1,164 @@
+# Programming Assigent 1. Reproducible Research
+
+Author: Ruben Sanchez
+
+### Loading and transforming the dataset
+
+We'll first load the csv file
+
+
+```r
+fitdata <- read.csv("activity.csv")
+```
+
+And now we transform the date field and complete the times to four positions
+
+
+```r
+fitdata$date <- as.Date(fitdata$date)
+fitdata$interval <- sprintf("%04d", fitdata$interval)
+str(fitdata)
+```
+
+'data.frame':	17568 obs. of  3 variables:
+ $ steps   : int  NA NA NA NA NA NA NA NA NA NA ...
+ $ date    : Date, format: "2012-10-01" "2012-10-01" ...
+ $ interval: chr  "0000" "0005" "0010" "0015" ...
+
+### Steps by day
+
+We are now going to sum the total steps for each day and see it in a histogram
+
+
+```r
+fitdata_group <- tapply(fitdata$steps, fitdata$date, sum)
+library(ggplot2)
+qplot(fitdata_group, xlab = "Steps by day")
+```
+
+```
+## `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.
+```
+
+```
+## Warning: Removed 8 rows containing non-finite values (stat_bin).
+```
+
+![plot of chunk unnamed-chunk-7](figure/unnamed-chunk-7-1.png)
+
+Let's calculate the mean and median of the steps per day
+
+
+```r
+mean(fitdata_group, na.rm = TRUE)
+```
+
+```
+## [1] 10766.19
+```
+
+```r
+median(fitdata_group, na.rm = TRUE)
+```
+
+```
+## [1] 10765
+```
+
+### Average daily activity pattern
+
+Next, we are going to calculate the mean number of steps in each 5-minute interval,
+and we'll show it with a time series plot and looking for the maximum.
+
+
+```r
+fitdata_time <- tapply(fitdata$steps, fitdata$interval, mean, na.rm =TRUE)
+times <- unique(fitdata$interval)
+fitdata_time <- cbind(fitdata_time, times)
+plot(fitdata_time[,2], fitdata_time[,1], type = "l", xlab = "interval", ylab = "steps")
+```
+
+![plot of chunk unnamed-chunk-9](figure/unnamed-chunk-9-1.png)
+
+```r
+interval_max <- fitdata_time[which.max(fitdata_time[,1]),2]
+print(paste("The 5-minute interval with the maximum steps is", interval_max))
+```
+
+```
+## [1] "The 5-minute interval with the maximum steps is 0835"
+```
+
+### Imputing missing values
+
+Let's start by calculating the number of NAs we have
+
+
+```r
+total_na <- sum(is.na(fitdata$steps))
+total_na
+```
+
+```
+## [1] 2304
+```
+
+To fill the not available values we are going to use the mean steps in each interval
+
+
+```r
+fitdata2 <- fitdata
+fitdata2$steps[is.na(fitdata2$steps)] <- tapply(fitdata$steps, fitdata$interval, mean, na.rm =TRUE)
+fitdata_group2 <- tapply(fitdata2$steps, fitdata2$date, sum)
+qplot(fitdata_group2, xlab = "Steps by day")
+```
+
+```
+## `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.
+```
+
+![plot of chunk unnamed-chunk-11](figure/unnamed-chunk-11-1.png)
+
+```r
+mean(fitdata_group2)
+```
+
+```
+## [1] 10766.19
+```
+
+```r
+median(fitdata_group2)
+```
+
+```
+## [1] 10766.19
+```
+
+We can see there is not a great difference between these results and the ones we obtained at the beginning of the analysis
+
+### Differences in weekdays
+
+We add a new fied for the type of day and fill it with weekday or weekend
+
+
+```r
+library(dplyr)
+fitdata2$day <- weekdays(fitdata2$date)
+fitdata2$day[fitdata2$day == "Saturday" | fitdata2$day == "Sunday"] <- "weekend"
+fitdata2$day[fitdata2$day == "Monday" | fitdata2$day == "Tuesday"| fitdata2$day == "Wednesday"| fitdata2$day == "Thursday"| fitdata2$day == "Friday"] <- "weekday"
+fitdataday <- filter(fitdata2, day == "weekday")
+fitdataend <- filter(fitdata2, day == "weekend")
+fitdata_timeday <- tapply(as.numeric(fitdataday$steps), fitdataday$interval, mean, na.rm =TRUE)
+fitdata_timeend <- tapply(as.numeric(fitdataend$steps), fitdataend$interval, mean, na.rm =TRUE)
+times2 <- unique(fitdata2$interval)
+fitdata_timeday <- cbind(fitdata_timeday, times2, "weekday")
+fitdata_timeend <- cbind(fitdata_timeend, times2, "weekend")
+fitdata_time2 <- rbind(fitdata_timeday, fitdata_timeend)
+library(lattice)
+xyplot(as.numeric(fitdata_time2[,1])~as.numeric(fitdata_time2[,2]) | fitdata_time2[,3], layout = c(1,2), type = "l", lty = 1, xlab = "Intervals", ylab = "Steps")
+```
+
+![plot of chunk unnamed-chunk-12](figure/unnamed-chunk-12-1.png)
+
+We can see several differences between weekdays and weekends. People start to walk earlier at weekdays, but later the number of steps decreases a lot.
