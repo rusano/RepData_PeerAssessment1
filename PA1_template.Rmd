@@ -6,13 +6,13 @@ Author: Ruben Sanchez
 
 We'll first load the csv file
 
-```{r, echo=TRUE}
+```{r, echo=TRUE, results='asis'}
 fitdata <- read.csv("activity.csv")
 ```
 
 And now we transform the date field and complete the times to four positions
 
-```{r, echo=TRUE}
+```{r, echo=TRUE, results='asis'}
 fitdata$date <- as.Date(fitdata$date)
 fitdata$interval <- sprintf("%04d", fitdata$interval)
 str(fitdata)
